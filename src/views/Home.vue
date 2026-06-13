@@ -65,12 +65,36 @@
       </div>
     </section>
 
-    <section v-if="store.loveLetters.length > 0 && !store.processing" class="results">
+    <section v-if="(store.loveLetters.length > 0 || store.anniversaries.length > 0) && !store.processing" class="results">
       <div class="results-header">
         <h3>✨ 为您找到 {{ store.loveLetters.length }} 段情书级对话</h3>
         <div class="actions">
           <button class="btn btn-secondary" @click="clearAll">🔄 重新上传</button>
+          <router-link v-if="store.anniversaries.length > 0" to="/anniversary" class="btn btn-secondary">📅 查看纪念日 ({{ store.anniversaries.length }})</router-link>
           <router-link to="/wall" class="btn btn-primary">🎨 查看情书墙</router-link>
+        </div>
+      </div>
+
+      <div v-if="store.anniversaries.length > 0" class="anniversary-summary card">
+        <div class="summary-header">
+          <h4>📅 发现 {{ store.anniversaries.length }} 个特别的日子</h4>
+          <router-link to="/anniversary" class="view-all">查看全部 →</router-link>
+        </div>
+        <div class="summary-cards">
+          <router-link 
+            v-for="(anniv, idx) in store.anniversaries.slice(0, 3)" 
+            :key="idx" 
+            to="/anniversary"
+            class="summary-item"
+          >
+            <span class="summary-emoji">{{ anniv.emoji }}</span>
+            <div class="summary-info">
+              <span class="summary-label">{{ anniv.label }}</span>
+              <span class="summary-days" :class="getDaysClass(anniv.daysAway)">
+                {{ anniv.daysAway === 0 ? '今天！' : anniv.daysAway + ' 天后' }}
+              </span>
+            </div>
+          </router-link>
         </div>
       </div>
 
@@ -127,7 +151,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { store } from '@/store'
 import { parseSmsFile, generateDemoData } from '@/parsers'
-import { findLoveLetters } from '@/detectors'
+import { findLoveLetters, findAllAnniversaries } from '@/detectors'
 
 const router = useRouter()
 const fileInput = ref(null)
@@ -163,7 +187,10 @@ async function processFile(file) {
     const loveLetters = findLoveLetters(conversations)
     store.setLoveLetters(loveLetters)
     
-    if (loveLetters.length === 0) {
+    const anniversaries = findAllAnniversaries(conversations)
+    store.setAnniversaries(anniversaries)
+    
+    if (loveLetters.length === 0 && anniversaries.length === 0) {
       store.error = '没有找到符合条件的对话，试试上传更多短信吧！'
     }
   } catch (e) {
@@ -185,6 +212,9 @@ async function loadDemo() {
     
     const loveLetters = findLoveLetters(conversations)
     store.setLoveLetters(loveLetters)
+    
+    const anniversaries = findAllAnniversaries(conversations)
+    store.setAnniversaries(anniversaries)
   } catch (e) {
     store.error = e.message
   } finally {
@@ -216,7 +246,20 @@ function getTagClass(tag) {
   if (tag.includes('争吵') || tag.includes('冤家') || tag.includes('情绪')) return 'tag-quarrel'
   if (tag.includes('撒娇') || tag.includes('可爱') || tag.includes('叠字')) return 'tag-cute'
   if (tag.includes('高频') || tag.includes('秒回') || tag.includes('互动')) return 'tag-freq'
+  if (tag.includes('生日')) return 'tag-birthday'
+  if (tag.includes('纪念日') || tag.includes('周年')) return 'tag-anniversary'
+  if (tag.includes('初见') || tag.includes('第一次见面')) return 'tag-firstMeet'
+  if (tag.includes('表白')) return 'tag-confession'
+  if (tag.includes('结婚') || tag.includes('婚礼')) return 'tag-wedding'
+  if (tag.includes('节日') || tag.includes('快乐') || tag.includes('🎂') || tag.includes('🎉') || tag.includes('💑') || tag.includes('🌸') || tag.includes('💕') || tag.includes('💒')) return 'tag-holiday'
   return 'tag'
+}
+
+function getDaysClass(daysAway) {
+  if (daysAway === 0) return 'days-today'
+  if (daysAway <= 7) return 'days-upcoming'
+  if (daysAway <= 30) return 'days-soon'
+  return 'days-later'
 }
 </script>
 
@@ -447,5 +490,113 @@ function getTagClass(tag) {
   justify-content: space-between;
   color: var(--text-light);
   font-size: 0.9rem;
+}
+
+.anniversary-summary {
+  margin-bottom: 2rem;
+  background: linear-gradient(135deg, #fff5f5, #fff0f6);
+  border: 2px solid var(--love-pink);
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.summary-header h4 {
+  font-size: 1.2rem;
+  color: var(--love-red);
+}
+
+.view-all {
+  color: var(--love-pink);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.3s;
+}
+
+.view-all:hover {
+  color: var(--love-red);
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  transition: all 0.3s;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.summary-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.15);
+}
+
+.summary-emoji {
+  font-size: 2rem;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.summary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.summary-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-days {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.days-today {
+  color: var(--love-red);
+  animation: pulse 2s infinite;
+}
+
+.days-upcoming {
+  color: var(--love-orange);
+}
+
+.days-soon {
+  color: var(--love-pink);
+}
+
+.days-later {
+  color: var(--text-light);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 </style>

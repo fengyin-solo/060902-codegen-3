@@ -5,6 +5,8 @@ export const store = reactive({
   selectedConversation: null,
   loveLetters: [],
   anonymousPosts: [],
+  anniversaries: [],
+  selectedAnniversary: null,
   processing: false,
   error: null,
 
@@ -16,8 +18,16 @@ export const store = reactive({
     this.loveLetters = letters
   },
 
+  setAnniversaries(annivs) {
+    this.anniversaries = annivs
+  },
+
   setSelectedConversation(conv) {
     this.selectedConversation = conv
+  },
+
+  setSelectedAnniversary(anniv) {
+    this.selectedAnniversary = anniv
   },
 
   addAnonymousPost(post) {
@@ -36,6 +46,8 @@ export const store = reactive({
     this.conversations = []
     this.selectedConversation = null
     this.loveLetters = []
+    this.anniversaries = []
+    this.selectedAnniversary = null
     this.error = null
   }
 })
