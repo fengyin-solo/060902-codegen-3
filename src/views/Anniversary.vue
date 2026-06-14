@@ -130,6 +130,46 @@ import { findAllAnniversaries } from '@/detectors'
 
 const expandedIdx = ref(null)
 
+function calculateDaysAway(date) {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const d = new Date(date)
+  const thisYearAnniversary = new Date(today.getFullYear(), d.getMonth(), d.getDate())
+  if (thisYearAnniversary < today) {
+    thisYearAnniversary.setFullYear(today.getFullYear() + 1)
+  }
+  const diffTime = thisYearAnniversary - today
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays === 365 ? 0 : diffDays
+}
+
+function calculateYearsPassed(date) {
+  const now = new Date()
+  const d = new Date(date)
+  let years = now.getFullYear() - d.getFullYear()
+  const monthDiff = now.getMonth() - d.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < d.getDate())) {
+    years--
+  }
+  return Math.max(0, years)
+}
+
+function refreshAnniversariesMetadata() {
+  if (store.anniversaries.length === 0) return
+  const updated = store.anniversaries.map(a => ({
+    ...a,
+    date: new Date(a.date),
+    daysAway: calculateDaysAway(a.date),
+    yearsPassed: calculateYearsPassed(a.date),
+    messages: Array.isArray(a.messages) ? a.messages.map(m => ({
+      ...m,
+      date: new Date(m.date)
+    })) : []
+  }))
+  updated.sort((a, b) => a.daysAway - b.daysAway)
+  store.setAnniversaries(updated)
+}
+
 const upcomingCount = computed(() => {
   return store.anniversaries.filter(a => a.daysAway > 0 && a.daysAway <= 30).length
 })
@@ -208,6 +248,7 @@ function shareAnniversary(anniv) {
 }
 
 onMounted(() => {
+  refreshAnniversariesMetadata()
   if (store.conversations.length > 0 && store.anniversaries.length === 0) {
     const anniversaries = findAllAnniversaries(store.conversations)
     store.setAnniversaries(anniversaries)
